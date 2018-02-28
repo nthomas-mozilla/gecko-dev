@@ -31,6 +31,14 @@ def add_signed_routes(config, jobs):
                 rest = ".".join(dep_route.split(".")[4:])
                 job['routes'].append(
                     'index.gecko.v2.{}.signed-nightly.{}'.format(branch, rest))
+        if 'partner repack' in dep_job.label:
+            for dep_route in dep_job.task.get('routes', []):
+                if not dep_route.startswith('index.releases.v1'):
+                    continue
+                branch = dep_route.split(".")[3]
+                rest = ".".join(dep_route.split(".")[4:])
+                job['routes'].append(
+                    'index.releases.v1.{}.signed-partner-repack.{}'.format(branch, rest))
 
         yield job
 
@@ -40,6 +48,11 @@ def define_upstream_artifacts(config, jobs):
     for job in jobs:
         dep_job = job['dependent-task']
         build_platform = dep_job.attributes.get('build_platform')
+
+        # Windows and Linux partner repacks have no internal signing to be done
+        if 'partner-repack' in config.kind and ('win' in build_platform or 'linux' in build_platform):
+            job['upstream-artifacts'] = []
+            yield job
 
         artifacts_specifications = generate_specifications_of_artifacts_to_sign(
             build_platform,
