@@ -39,8 +39,6 @@ def add_dependencies(config, jobs):
         # Add any kind_dependencies_tasks with matching product as dependencies
         product = job.get('shipping-product')
         phase = job.get('shipping-phase')
-        #if 'partner' in config.kind and 'signing' in config.kind:
-        #    raise Exception(job)
         if product is None:
             continue
 

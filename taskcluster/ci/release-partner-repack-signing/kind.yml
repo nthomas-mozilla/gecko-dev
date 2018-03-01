@@ -15,7 +15,6 @@ transforms:
 kind-dependencies:
    - release-partner-repack
 
-job-defaults:
+job-template:
    shipping-product: firefox
-   shipping_product: firefox
    shipping-phase: promote

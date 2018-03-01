@@ -53,6 +53,7 @@ def define_upstream_artifacts(config, jobs):
         if 'partner-repack' in config.kind and ('win' in build_platform or 'linux' in build_platform):
             job['upstream-artifacts'] = []
             yield job
+            break
 
         artifacts_specifications = generate_specifications_of_artifacts_to_sign(
             build_platform,

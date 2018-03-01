@@ -42,6 +42,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/repack-manifests.git"
                   mozilla-release: "git@github.com:mozilla-partners/repack-manifests.git"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: PR
+         platform: linux/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: linux
 
@@ -54,6 +59,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/repack-manifests.git"
                   mozilla-release: "git@github.com:mozilla-partners/repack-manifests.git"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: PR
+         platform: linux64/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: linux
 
@@ -66,6 +76,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/repack-manifests.git"
                   mozilla-release: "git@github.com:mozilla-partners/repack-manifests.git"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: PR
+         platform: macosx64/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: macosx64
 
@@ -78,6 +93,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/repack-manifests.git"
                   mozilla-release: "git@github.com:mozilla-partners/repack-manifests.git"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: PR
+         platform: win32/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: win32
 
@@ -90,6 +110,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/repack-manifests.git"
                   mozilla-release: "git@github.com:mozilla-partners/repack-manifests.git"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: PR
+         platform: win64/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: win64
 
@@ -102,6 +127,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/mozilla-EME-free-manifest"
                   mozilla-release: "git@github.com:mozilla-partners/mozilla-EME-free-manifest"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: EME
+         platform: macosx64/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: macosx64
 
@@ -114,6 +144,11 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/mozilla-EME-free-manifest"
                   mozilla-release: "git@github.com:mozilla-partners/mozilla-EME-free-manifest"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: EME
+         platform: win32/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: win32
 
@@ -126,5 +161,10 @@ jobs:
                   mozilla-beta: "git@github.com:mozilla-partners/mozilla-EME-free-manifest"
                   mozilla-release: "git@github.com:mozilla-partners/mozilla-EME-free-manifest"
                   default: "git@github.com:mozilla-releng/staging-repack-manifests.git"
+      treeherder:
+         symbol: EME
+         platform: win64/opt
+         kind: test
+         tier: 1
       attributes:
          build_platform: win64
