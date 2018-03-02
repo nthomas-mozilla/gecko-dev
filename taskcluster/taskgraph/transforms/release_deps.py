@@ -65,12 +65,6 @@ def add_dependencies(config, jobs):
                 if dep_task.attributes["build_platform"] != job["attributes"]["build_platform"]:
                     continue
 
-            # XXX: HORRIBLE HACK
-            if 'partner-repack' in config.kind:
-                if 'EME' in job['label'] and 'EME' not in dep_task.label:
-                    continue
-                if 'partner repack' in job['label'] and 'partner repack' not in dep_task.label:
-                    continue
             # Add matching product tasks to deps
             if _get_product(dep_task.task) == product or \
                     dep_task.attributes.get('shipping_product') == product:
