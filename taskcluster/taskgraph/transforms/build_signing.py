@@ -50,27 +50,48 @@ def define_upstream_artifacts(config, jobs):
         build_platform = dep_job.attributes.get('build_platform')
 
         # Windows and Linux partner repacks have no internal signing to be done
-        if 'partner-repack' in config.kind and ('win' in build_platform or 'linux' in build_platform):
-            job['upstream-artifacts'] = []
-            yield job
-            continue
+        if 'partner-repack' in config.kind:
+            if 'win' in build_platform or 'linux' in build_platform:
+                job['upstream-artifacts'] = []
+                yield job
+                continue
+            
+            artifacts_specifications = generate_specifications_of_artifacts_to_sign(
+                build_platform,
+                dep_job.attributes.get('nightly'),
+                keep_locale_template=True,
+                kind=config.kind,
+            )
+            job['upstream-artifacts'] = [{
+                'taskId': {'task-reference': '<release-partner-repack>'},
+                # TODO: what should this be set to? what does it imply?
+                'taskType': 'build',
+                'paths': [
+                    path_template.format(locale=repack_id)
+                    # TODO: this should get passed in. for eme it's probably just eme-free
+                    for repack_id in ('partner1', 'partner2')
+                    for path_template in spec['artifacts']
+                ],
+                'formats': spec['formats'],
+            } for spec in artifacts_specifications]
 
-        artifacts_specifications = generate_specifications_of_artifacts_to_sign(
-            build_platform,
-            dep_job.attributes.get('nightly'),
-            keep_locale_template=False,
-            kind=config.kind,
-        )
+        else:
+            artifacts_specifications = generate_specifications_of_artifacts_to_sign(
+                build_platform,
+                dep_job.attributes.get('nightly'),
+                keep_locale_template=False,
+                kind=config.kind,
+            )
 
-        if 'android' in build_platform:
-            # We're in the job that creates both multilocale and en-US APKs
-            artifacts_specifications[0]['artifacts'].append('public/build/en-US/target.apk')
+            if 'android' in build_platform:
+                # We're in the job that creates both multilocale and en-US APKs
+                artifacts_specifications[0]['artifacts'].append('public/build/en-US/target.apk')
 
-        job['upstream-artifacts'] = [{
-            'taskId': {'task-reference': '<build>'},
-            'taskType': 'build',
-            'paths': spec['artifacts'],
-            'formats': spec['formats'],
-        } for spec in artifacts_specifications]
+            job['upstream-artifacts'] = [{
+                'taskId': {'task-reference': '<build>'},
+                'taskType': 'build',
+                'paths': spec['artifacts'],
+                'formats': spec['formats'],
+            } for spec in artifacts_specifications]
 
         yield job
