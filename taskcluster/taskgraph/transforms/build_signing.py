@@ -31,14 +31,14 @@ def add_signed_routes(config, jobs):
                 rest = ".".join(dep_route.split(".")[4:])
                 job['routes'].append(
                     'index.gecko.v2.{}.signed-nightly.{}'.format(branch, rest))
-        if 'partner repack' in dep_job.label:
+        if 'EME-free' in dep_job.label:
             for dep_route in dep_job.task.get('routes', []):
                 if not dep_route.startswith('index.releases.v1'):
                     continue
                 branch = dep_route.split(".")[3]
                 rest = ".".join(dep_route.split(".")[4:])
                 job['routes'].append(
-                    'index.releases.v1.{}.signed-partner-repack.{}'.format(branch, rest))
+                    'index.releases.v1.{}.signed-eme-free.{}'.format(branch, rest))
 
         yield job
 
