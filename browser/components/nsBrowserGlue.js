@@ -95,7 +95,6 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   ContextualIdentityService: "resource://gre/modules/ContextualIdentityService.jsm",
   CustomizableUI: "resource:///modules/CustomizableUI.jsm",
   DateTimePickerHelper: "resource://gre/modules/DateTimePickerHelper.jsm",
-  DirectoryLinksProvider: "resource:///modules/DirectoryLinksProvider.jsm",
   ExtensionsUI: "resource:///modules/ExtensionsUI.jsm",
   Feeds: "resource:///modules/Feeds.jsm",
   FileUtils: "resource://gre/modules/FileUtils.jsm",
@@ -111,6 +110,7 @@ XPCOMUtils.defineLazyModuleGetters(this, {
   LoginManagerParent: "resource://gre/modules/LoginManagerParent.jsm",
   NetUtil: "resource://gre/modules/NetUtil.jsm",
   NewTabUtils: "resource://gre/modules/NewTabUtils.jsm",
+  Normandy: "resource://normandy/Normandy.jsm",
   OS: "resource://gre/modules/osfile.jsm",
   PageActions: "resource:///modules/PageActions.jsm",
   PageThumbs: "resource://gre/modules/PageThumbs.jsm",
@@ -711,6 +711,7 @@ BrowserGlue.prototype = {
       author: vendorShortName,
     });
 
+    Normandy.init();
 
     // Initialize the default l10n resource sources for L10nRegistry.
     let locales = Services.locale.getPackagedLocales();
@@ -998,9 +999,7 @@ BrowserGlue.prototype = {
 
     PageThumbs.init();
 
-    DirectoryLinksProvider.init();
     NewTabUtils.init();
-    NewTabUtils.links.addProvider(DirectoryLinksProvider);
 
     PageActions.init();
 
@@ -1059,6 +1058,8 @@ BrowserGlue.prototype = {
     if (AppConstants.NIGHTLY_BUILD && AppConstants.MOZ_DATA_REPORTING) {
       this.browserErrorReporter.uninit();
     }
+
+    Normandy.uninit();
   },
 
   // All initial windows have opened.
@@ -1820,7 +1821,7 @@ BrowserGlue.prototype = {
 
   // eslint-disable-next-line complexity
   _migrateUI: function BG__migrateUI() {
-    const UI_VERSION = 62;
+    const UI_VERSION = 64;
     const BROWSER_DOCURL = "chrome://browser/content/browser.xul";
 
     let currentUIVersion;
@@ -2314,6 +2315,39 @@ BrowserGlue.prototype = {
           xulStore.removeValue(BROWSER_DOCURL, toolbarId, resourceName);
         }
       }
+    }
+
+    if (currentUIVersion < 63 &&
+        Services.prefs.getCharPref("general.config.filename", "") == "dsengine.cfg") {
+      let searchInitializedPromise = new Promise(resolve => {
+        if (Services.search.isInitialized) {
+          resolve();
+        }
+        const SEARCH_SERVICE_TOPIC = "browser-search-service";
+        Services.obs.addObserver(function observer(subject, topic, data) {
+          if (data != "init-complete") {
+            return;
+          }
+          Services.obs.removeObserver(observer, SEARCH_SERVICE_TOPIC);
+          resolve();
+        }, SEARCH_SERVICE_TOPIC);
+      });
+      searchInitializedPromise.then(() => {
+        let engineNames = ["Bing Search Engine",
+                           "Yahoo Search Engine",
+                           "Yandex Search Engine"];
+        for (let engineName of engineNames) {
+          let engine = Services.search.getEngineByName(engineName);
+          if (engine) {
+            Services.search.removeEngine(engine);
+          }
+        }
+      });
+    }
+
+    if (currentUIVersion < 64) {
+      OS.File.remove(OS.Path.join(OS.Constants.Path.profileDir,
+                                  "directoryLinks.json"), {ignoreAbsent: true});
     }
 
     // Update the migration version.
@@ -3188,13 +3222,14 @@ this.NSGetFactory = XPCOMUtils.generateNSGetFactory(components);
 // Listen for UITour messages.
 // Do it here instead of the UITour module itself so that the UITour module is lazy loaded
 // when the first message is received.
-Services.mm.addMessageListener("UITour:onPageEvent", function(aMessage) {
+var globalMM = Cc["@mozilla.org/globalmessagemanager;1"].getService(Ci.nsIMessageListenerManager);
+globalMM.addMessageListener("UITour:onPageEvent", function(aMessage) {
   UITour.onPageEvent(aMessage, aMessage.data);
 });
 
 // Listen for HybridContentTelemetry messages.
 // Do it here instead of HybridContentTelemetry.init() so that
 // the module can be lazily loaded on the first message.
-Services.mm.addMessageListener("HybridContentTelemetry:onTelemetryMessage", aMessage => {
+globalMM.addMessageListener("HybridContentTelemetry:onTelemetryMessage", aMessage => {
   HybridContentTelemetry.onTelemetryMessage(aMessage, aMessage.data);
 });

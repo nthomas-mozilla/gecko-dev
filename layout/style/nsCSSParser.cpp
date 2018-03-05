@@ -143,6 +143,7 @@ public:
                       nsIURI*          aSheetURI,
                       nsIURI*          aBaseURI,
                       nsIPrincipal*    aSheetPrincipal,
+                      SheetLoadData*   aLoadData,
                       uint32_t         aLineNumber,
                       css::LoaderReusableStyleSheets* aReusableSheets);
 
@@ -1299,6 +1300,9 @@ protected:
   // The sheet we're parsing into
   RefPtr<CSSStyleSheet> mSheet;
 
+  // The data describing this load, if applicable.
+  RefPtr<SheetLoadData> mLoadData;
+
   // Used for @import rules
   css::Loader* mChildLoader; // not ref counted, it owns us
 
@@ -1574,6 +1578,7 @@ CSSParserImpl::ParseSheet(const nsAString& aInput,
                           nsIURI*          aSheetURI,
                           nsIURI*          aBaseURI,
                           nsIPrincipal*    aSheetPrincipal,
+                          SheetLoadData*   aLoadData,
                           uint32_t         aLineNumber,
                           css::LoaderReusableStyleSheets* aReusableSheets)
 {
@@ -1597,6 +1602,7 @@ CSSParserImpl::ParseSheet(const nsAString& aInput,
   nsCSSScanner scanner(aInput, aLineNumber);
   css::ErrorReporter reporter(scanner, mSheet, mChildLoader, aSheetURI);
   InitScanner(scanner, reporter, aSheetURI, aBaseURI, aSheetPrincipal);
+  mLoadData = aLoadData;
 
   int32_t ruleCount = mSheet->StyleRuleCount();
   if (0 < ruleCount) {
@@ -1645,6 +1651,7 @@ CSSParserImpl::ParseSheet(const nsAString& aInput,
 
   mSheet->SetSourceMapURLFromComment(scanner.GetSourceMapURL());
   mSheet->SetSourceURL(scanner.GetSourceURL());
+  mLoadData = nullptr;
   ReleaseScanner();
 
   mParsingMode = css::eAuthorSheetFeatures;
@@ -3699,7 +3706,7 @@ CSSParserImpl::ProcessImport(const nsString& aURLSpec,
   }
 
   if (mChildLoader) {
-    mChildLoader->LoadChildSheet(mSheet, url, aMedia, rule, mReusableSheets);
+    mChildLoader->LoadChildSheet(mSheet, mLoadData, url, aMedia, rule, mReusableSheets);
   }
 }
 
@@ -14049,6 +14056,9 @@ CSSParserImpl::ParseFont()
       AppendValue(eCSSProperty_font_variant_ligatures, family);
       AppendValue(eCSSProperty_font_variant_numeric, family);
       AppendValue(eCSSProperty_font_variant_position, family);
+      if (StylePrefs::sFontVariationsEnabled) {
+        AppendValue(eCSSProperty_font_optical_sizing, family);
+      }
     }
     else {
       AppendValue(eCSSProperty__x_system_font, family);
@@ -14069,6 +14079,9 @@ CSSParserImpl::ParseFont()
       AppendValue(eCSSProperty_font_variant_ligatures, systemFont);
       AppendValue(eCSSProperty_font_variant_numeric, systemFont);
       AppendValue(eCSSProperty_font_variant_position, systemFont);
+      if (StylePrefs::sFontVariationsEnabled) {
+        AppendValue(eCSSProperty_font_optical_sizing, systemFont);
+      }
     }
     return true;
   }
@@ -14179,6 +14192,10 @@ CSSParserImpl::ParseFont()
                   nsCSSValue(eCSSUnit_Normal));
       AppendValue(eCSSProperty_font_variant_position,
                   nsCSSValue(eCSSUnit_Normal));
+      if (StylePrefs::sFontVariationsEnabled) {
+        AppendValue(eCSSProperty_font_optical_sizing,
+                    nsCSSValue(NS_FONT_OPTICAL_SIZING_AUTO, eCSSUnit_Enumerated));
+      }
       return true;
     }
   }
@@ -17932,12 +17949,13 @@ nsCSSParser::ParseSheet(const nsAString& aInput,
                         nsIURI*          aSheetURI,
                         nsIURI*          aBaseURI,
                         nsIPrincipal*    aSheetPrincipal,
+                        SheetLoadData*   aLoadData,
                         uint32_t         aLineNumber,
                         css::LoaderReusableStyleSheets* aReusableSheets)
 {
   return static_cast<CSSParserImpl*>(mImpl)->
-    ParseSheet(aInput, aSheetURI, aBaseURI, aSheetPrincipal, aLineNumber,
-               aReusableSheets);
+    ParseSheet(aInput, aSheetURI, aBaseURI, aSheetPrincipal, aLoadData,
+               aLineNumber, aReusableSheets);
 }
 
 already_AddRefed<css::Declaration>

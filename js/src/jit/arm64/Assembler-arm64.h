@@ -87,7 +87,6 @@ static constexpr Register IntArgReg5 { Registers::x5 };
 static constexpr Register IntArgReg6 { Registers::x6 };
 static constexpr Register IntArgReg7 { Registers::x7 };
 static constexpr Register HeapReg { Registers::x21 };
-static constexpr Register HeapLenReg { Registers::x22 };
 
 // Define unsized Registers.
 #define DEFINE_UNSIZED_REGISTERS(N)  \
@@ -245,14 +244,15 @@ class Assembler : public vixl::Assembler
     }
 
     void processCodeLabels(uint8_t* rawCode) {
-        for (size_t i = 0; i < codeLabels_.length(); i++) {
-            CodeLabel label = codeLabels_[i];
-            Bind(rawCode, *label.patchAt(), *label.target());
+        for (const CodeLabel& label : codeLabels_) {
+            Bind(rawCode, label);
         }
     }
 
-    static void Bind(uint8_t* rawCode, CodeOffset label, CodeOffset address) {
-        *reinterpret_cast<const void**>(rawCode + label.offset()) = rawCode + address.offset();
+    static void Bind(uint8_t* rawCode, const CodeLabel& label) {
+        size_t patchAtOffset = label.patchAt().offset();
+        size_t targetOffset = label.target().offset();
+        *reinterpret_cast<const void**>(rawCode + patchAtOffset) = rawCode + targetOffset;
     }
 
     void retarget(Label* cur, Label* next);
@@ -370,10 +370,10 @@ class Assembler : public vixl::Assembler
     static const size_t OffsetOfJumpTableEntryPointer = 8;
 
   public:
-    void writeCodePointer(CodeOffset* label) {
+    void writeCodePointer(CodeLabel* label) {
         uintptr_t x = uintptr_t(-1);
         BufferOffset off = EmitData(&x, sizeof(uintptr_t));
-        label->bind(off.getOffset());
+        label->patchAt()->bind(off.getOffset());
     }
 
 

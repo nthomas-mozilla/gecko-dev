@@ -70,10 +70,10 @@ pub use self::list::{ListStyleImage, Quotes};
 pub use self::list::ListStyleType;
 pub use self::outline::OutlineStyle;
 pub use self::percentage::Percentage;
-pub use self::position::{GridAutoFlow, GridTemplateAreas, Position, ZIndex};
-pub use self::pointing::Cursor;
+pub use self::pointing::{CaretColor, Cursor};
 #[cfg(feature = "gecko")]
 pub use self::pointing::CursorImage;
+pub use self::position::{GridAutoFlow, GridTemplateAreas, Position, ZIndex};
 pub use self::svg::{SVGLength, SVGOpacity, SVGPaint, SVGPaintKind};
 pub use self::svg::{SVGPaintOrder, SVGStrokeDashArray, SVGWidth};
 pub use self::svg::MozContextProperties;
@@ -289,7 +289,10 @@ impl<'a, 'cx, 'cx_a: 'cx, S: ToComputedValue + 'a> Iterator for ComputedVecIter<
 /// This trait is derivable with `#[derive(ToComputedValue)]`. The derived
 /// implementation just calls `ToComputedValue::to_computed_value` on each field
 /// of the passed value, or `Clone::clone` if the field is annotated with
-/// `#[compute(clone)]`.
+/// `#[compute(clone)]`. The deriving code assumes that if the type isn't
+/// generic, then the trait can be implemented as simple `Clone::clone` calls,
+/// this means that a manual implementation with `ComputedValue = Self` is bogus
+/// if it returns anything else than a clone.
 pub trait ToComputedValue {
     /// The computed value type we're going to be converted to.
     type ComputedValue;
@@ -632,9 +635,6 @@ impl ClipRectOrAuto {
         }
     }
 }
-
-/// <color> | auto
-pub type ColorOrAuto = Either<Color, Auto>;
 
 /// The computed value of a CSS `url()`, resolved relative to the stylesheet URL.
 #[cfg(feature = "servo")]

@@ -222,17 +222,11 @@ google-play-strings
 Download strings to display on Google Play from https://l10n.mozilla-community.org/stores_l10n/.
 Artifact is then used by push-apk.
 
-push-apk-breakpoint
--------------------
-Decides whether or not APKs should be published onto Google Play Store. Jobs of this
-kind depend on all the signed multi-locales (aka "multi") APKs for a given release,
-in order to make the decision.
-
 push-apk
 --------
 PushApk publishes Android packages onto Google Play Store. Jobs of this kind take
 all the signed multi-locales (aka "multi") APKs for a given release and upload them
-all at once. They also depend on the breakpoint.
+all at once.
 
 release-balrog-submit-toplevel
 ----------------------
@@ -284,23 +278,31 @@ release-mark-as-shipped
 Marks releases as shipped in Ship-It.
 
 release-bouncer-aliases
-------------------------------
+-----------------------
 Update Bouncer's (download.mozilla.org) "latest" aliases.
 
 release-bouncer-check
-------------------------------
+---------------------
 Checks Bouncer (download.mozilla.org) uptake.
 
 release-generate-checksums
 --------------------------
-Generate the per-release checksums along with the summaries and upload it to S3.
+Generate the per-release checksums along with the summaries
+
+release-generate-checksums-signing
+----------------------------------
+Sign the pre-release checksums produced by the above task
+
+release-generate-checksums-beetmover
+------------------------------------
+Submit to S3 the artifacts produced by the release-checksums task and its signing counterpart.
 
 release-final-verify
----------------------
+--------------------
 Verifies the contents and package of release update MARs.
 
 release-secondary-final-verify
----------------------
+------------------------------
 Verifies the contents and package of release update MARs for RC releases.
 
 release-secondary-balrog-publishing

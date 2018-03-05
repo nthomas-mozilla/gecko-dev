@@ -37,11 +37,11 @@
 #include "prclist.h"
 #include "mozilla/dom/DOMPrefs.h"
 #include "mozilla/dom/BindingDeclarations.h"
-#include "mozilla/dom/ChromeMessageBroadcaster.h"
 #include "mozilla/dom/StorageEvent.h"
 #include "mozilla/dom/StorageEventBinding.h"
 #include "mozilla/dom/UnionTypes.h"
 #include "mozilla/ErrorResult.h"
+#include "nsFrameMessageManager.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/GuardObjects.h"
 #include "mozilla/LinkedList.h"
@@ -401,6 +401,8 @@ public:
   static bool IsWindowPrintEnabled(JSContext* /* unused */, JSObject* /* unused */);
 
   static bool RegisterProtocolHandlerAllowedForContext(JSContext* /* unused */, JSObject* aObj);
+
+  static bool DeviceSensorsEnabled(JSContext* /* unused */, JSObject* aObj);
 
   bool DoResolve(JSContext* aCx, JS::Handle<JSObject*> aObj,
                  JS::Handle<jsid> aId,
@@ -941,11 +943,9 @@ public:
   void Restore();
   void NotifyDefaultButtonLoaded(mozilla::dom::Element& aDefaultButton,
                                  mozilla::ErrorResult& aError);
-  mozilla::dom::ChromeMessageBroadcaster*
-    GetMessageManager(mozilla::ErrorResult& aError);
-  mozilla::dom::ChromeMessageBroadcaster*
-    GetGroupMessageManager(const nsAString& aGroup,
-                           mozilla::ErrorResult& aError);
+  nsIMessageBroadcaster* GetMessageManager(mozilla::ErrorResult& aError);
+  nsIMessageBroadcaster* GetGroupMessageManager(const nsAString& aGroup,
+                                                mozilla::ErrorResult& aError);
   void BeginWindowMove(mozilla::dom::Event& aMouseDownEvent,
                        mozilla::dom::Element* aPanel,
                        mozilla::ErrorResult& aError);
@@ -1273,13 +1273,19 @@ private:
   {
     MOZ_RELEASE_ASSERT(IsChromeWindow());
     for (auto iter = mChromeFields.mGroupMessageManagers.Iter(); !iter.Done(); iter.Next()) {
-      mozilla::dom::ChromeMessageBroadcaster* mm = iter.UserData();
+      nsIMessageBroadcaster* mm = iter.UserData();
       if (mm) {
-        mm->Disconnect();
+        static_cast<nsFrameMessageManager*>(mm)->Disconnect();
       }
     }
     mChromeFields.mGroupMessageManagers.Clear();
   }
+
+  // Call or Cancel mDocumentFlushedResolvers items, and perform MicroTask
+  // checkpoint after that, and adds observer if new mDocumentFlushedResolvers
+  // items are added while Promise callbacks inside the checkpoint.
+  template<bool call>
+  void CallOrCancelDocumentFlushedResolvers();
 
   void CallDocumentFlushedResolvers();
   void CancelDocumentFlushedResolvers();
@@ -1475,9 +1481,8 @@ protected:
       : mGroupMessageManagers(1)
     {}
 
-    RefPtr<mozilla::dom::ChromeMessageBroadcaster> mMessageManager;
-    nsRefPtrHashtable<nsStringHashKey,
-                      mozilla::dom::ChromeMessageBroadcaster> mGroupMessageManagers;
+    nsCOMPtr<nsIMessageBroadcaster> mMessageManager;
+    nsInterfaceHashtable<nsStringHashKey, nsIMessageBroadcaster> mGroupMessageManagers;
   } mChromeFields;
 
   // These fields are used by the inner and outer windows to prevent

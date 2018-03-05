@@ -68,8 +68,9 @@ class GlobalPCList {
     Services.obs.addObserver(this, "gmp-plugin-crash", true);
     Services.obs.addObserver(this, "PeerConnection:response:allow", true);
     Services.obs.addObserver(this, "PeerConnection:response:deny", true);
-    if (Services.cpmm) {
-      Services.cpmm.addMessageListener("gmp-plugin-crash", this);
+    if (Cc["@mozilla.org/childprocessmessagemanager;1"]) {
+      let mm = Cc["@mozilla.org/childprocessmessagemanager;1"].getService(Ci.nsIMessageListenerManager);
+      mm.addMessageListener("gmp-plugin-crash", this);
     }
   }
 
@@ -442,7 +443,6 @@ class RTCPeerConnection {
     this.makeGetterSetterEH("onicecandidate");
     this.makeGetterSetterEH("onnegotiationneeded");
     this.makeGetterSetterEH("onsignalingstatechange");
-    this.makeGetterSetterEH("onremovestream");
     this.makeGetterSetterEH("ondatachannel");
     this.makeGetterSetterEH("oniceconnectionstatechange");
     this.makeGetterSetterEH("onicegatheringstatechange");
@@ -1831,11 +1831,6 @@ class PeerConnectionObserver {
 
   onGetStatsError(code, message) {
     this._dompc._onGetStatsFailure(this.newError(message, code));
-  }
-
-  onRemoveStream(stream) {
-    this.dispatchEvent(new this._dompc._win.MediaStreamEvent("removestream",
-                                                             { stream }));
   }
 
   _getTransceiverWithRecvTrack(webrtcTrackId) {

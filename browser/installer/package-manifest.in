@@ -200,7 +200,6 @@
 #endif
 @RESPATH@/components/dom_file.xpt
 @RESPATH@/components/dom_system.xpt
-@RESPATH@/components/dom_canvas.xpt
 @RESPATH@/components/dom_core.xpt
 @RESPATH@/components/dom_events.xpt
 @RESPATH@/components/dom_geolocation.xpt
@@ -371,6 +370,8 @@
 @RESPATH@/browser/components/aboutdevtools.manifest
 @RESPATH@/browser/components/aboutdevtoolstoolbox-registration.js
 @RESPATH@/browser/components/aboutdevtoolstoolbox.manifest
+@RESPATH@/browser/components/nsAboutCapabilities.js
+@RESPATH@/browser/components/aboutcapabilities.manifest
 @RESPATH@/browser/components/Experiments.manifest
 @RESPATH@/browser/components/ExperimentsService.js
 @RESPATH@/browser/components/browser-newtab.xpt

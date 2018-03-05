@@ -7,6 +7,9 @@
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm", {});
 const { XPCOMUtils } = ChromeUtils.import("resource://gre/modules/XPCOMUtils.jsm", {});
 
+XPCOMUtils.defineLazyServiceGetter(this, "cpmm",
+                                   "@mozilla.org/childprocessmessagemanager;1",
+                                   "nsIMessageSender");
 ChromeUtils.defineModuleGetter(this, "E10SUtils",
                                "resource://gre/modules/E10SUtils.jsm");
 
@@ -34,7 +37,7 @@ const MSG_MGR_CONSOLE_INFO_MAX = 1024;
 function ContentProcessForward() {
   Services.obs.addObserver(this, "console-api-log-event");
   Services.obs.addObserver(this, "xpcom-shutdown");
-  Services.cpmm.addMessageListener("DevTools:StopForwardingContentProcessMessage", this);
+  cpmm.addMessageListener("DevTools:StopForwardingContentProcessMessage", this);
 }
 ContentProcessForward.prototype = {
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIObserver,
@@ -52,14 +55,13 @@ ContentProcessForward.prototype = {
         let consoleMsg = subject.wrappedJSObject;
 
         let msgData = {
-          level: consoleMsg.level,
+          ...consoleMsg,
+          arguments: [],
           filename: consoleMsg.filename.substring(0, MSG_MGR_CONSOLE_INFO_MAX),
-          lineNumber: consoleMsg.lineNumber,
           functionName: consoleMsg.functionName &&
             consoleMsg.functionName.substring(0, MSG_MGR_CONSOLE_INFO_MAX),
-          timeStamp: consoleMsg.timeStamp,
-          addonId: consoleMsg.addonId,
-          arguments: [],
+          // Prevents cyclic object error when using msgData in sendAsyncMessage
+          wrappedJSObject: null,
         };
 
         // We can't send objects over the message manager, so we sanitize
@@ -105,7 +107,7 @@ ContentProcessForward.prototype = {
           }
         }
 
-        Services.cpmm.sendAsyncMessage("Console:Log", msgData);
+        cpmm.sendAsyncMessage("Console:Log", msgData);
         break;
       }
 
@@ -118,8 +120,7 @@ ContentProcessForward.prototype = {
   uninit() {
     Services.obs.removeObserver(this, "console-api-log-event");
     Services.obs.removeObserver(this, "xpcom-shutdown");
-    Services.cpmm.removeMessageListener("DevTools:StopForwardingContentProcessMessage",
-                                        this);
+    cpmm.removeMessageListener("DevTools:StopForwardingContentProcessMessage", this);
   }
 };
 

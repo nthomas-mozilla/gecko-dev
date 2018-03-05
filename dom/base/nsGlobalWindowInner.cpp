@@ -1246,7 +1246,8 @@ nsGlobalWindowInner::CleanUp()
   if (mCleanMessageManager) {
     MOZ_ASSERT(mIsChrome, "only chrome should have msg manager cleaned");
     if (mChromeFields.mMessageManager) {
-      mChromeFields.mMessageManager->Disconnect();
+      static_cast<nsFrameMessageManager*>(
+        mChromeFields.mMessageManager.get())->Disconnect();
     }
   }
 
@@ -3029,6 +3030,12 @@ nsGlobalWindowInner::RegisterProtocolHandlerAllowedForContext(JSContext* aCx, JS
 {
   return IsSecureContextOrObjectIsFromSecureContext(aCx, aObj) ||
          Preferences::GetBool("dom.registerProtocolHandler.insecure.enabled");
+}
+
+/* static */ bool
+nsGlobalWindowInner::DeviceSensorsEnabled(JSContext* aCx, JSObject* aObj)
+{
+  return Preferences::GetBool("device.sensors.enabled");
 }
 
 nsIDOMOfflineResourceList*
@@ -6714,12 +6721,6 @@ nsGlobalWindowInner::RunTimeoutHandler(Timeout* aTimeout,
   // point anyway, and the script context should have already reported
   // the script error in the usual way - so we just drop it.
 
-  // Since we might be processing more timeouts, go ahead and flush the promise
-  // queue now before we do that.  We need to do that while we're still in our
-  // "running JS is safe" state (e.g. mRunningTimeout is set, timeout->mRunning
-  // is false).
-  Promise::PerformMicroTaskCheckpoint();
-
   if (trackNestingLevel) {
     TimeoutManager::SetNestingLevel(nestingLevel);
   }
@@ -7445,28 +7446,68 @@ nsGlobalWindowInner::PromiseDocumentFlushed(PromiseDocumentFlushedCallback& aCal
   return resultPromise.forget();
 }
 
+template<bool call>
+void
+nsGlobalWindowInner::CallOrCancelDocumentFlushedResolvers()
+{
+  MOZ_ASSERT(!mIteratingDocumentFlushedResolvers);
+
+  while (true) {
+    {
+      // To coalesce MicroTask checkpoints inside callback call, enclose the
+      // inner loop with nsAutoMicroTask, and perform a MicroTask checkpoint
+      // after the loop.
+      nsAutoMicroTask mt;
+
+      mIteratingDocumentFlushedResolvers = true;
+      for (const auto& documentFlushedResolver : mDocumentFlushedResolvers) {
+        if (call) {
+          documentFlushedResolver->Call();
+        } else {
+          documentFlushedResolver->Cancel();
+        }
+      }
+      mDocumentFlushedResolvers.Clear();
+      mIteratingDocumentFlushedResolvers = false;
+    }
+
+    // Leaving nsAutoMicroTask above will perform MicroTask checkpoint, and
+    // Promise callbacks there may create mDocumentFlushedResolvers items.
+
+    // If there's no new item, there's nothing to do here.
+    if (!mDocumentFlushedResolvers.Length()) {
+      break;
+    }
+
+    // If there are new items, the observer is not added for them when calling
+    // PromiseDocumentFlushed.  Add here and leave.
+    // FIXME: Handle this case inside PromiseDocumentFlushed (bug 1442824).
+    if (mDoc) {
+      nsIPresShell* shell = mDoc->GetShell();
+      if (shell) {
+        (void) shell->AddPostRefreshObserver(this);
+        break;
+      }
+    }
+
+    // If we fail adding observer, keep looping to resolve or reject all
+    // promises.  This case happens while destroying window.
+    // This violates the constraint that the promiseDocumentFlushed callback
+    // only ever run when no flush needed, but it's necessary to resolve
+    // Promise returned by that.
+  }
+}
+
 void
 nsGlobalWindowInner::CallDocumentFlushedResolvers()
 {
-  MOZ_ASSERT(!mIteratingDocumentFlushedResolvers);
-  mIteratingDocumentFlushedResolvers = true;
-  for (const auto& documentFlushedResolver : mDocumentFlushedResolvers) {
-    documentFlushedResolver->Call();
-  }
-  mDocumentFlushedResolvers.Clear();
-  mIteratingDocumentFlushedResolvers = false;
+  CallOrCancelDocumentFlushedResolvers<true>();
 }
 
 void
 nsGlobalWindowInner::CancelDocumentFlushedResolvers()
 {
-  MOZ_ASSERT(!mIteratingDocumentFlushedResolvers);
-  mIteratingDocumentFlushedResolvers = true;
-  for (const auto& documentFlushedResolver : mDocumentFlushedResolvers) {
-    documentFlushedResolver->Cancel();
-  }
-  mDocumentFlushedResolvers.Clear();
-  mIteratingDocumentFlushedResolvers = false;
+  CallOrCancelDocumentFlushedResolvers<false>();
 }
 
 void
@@ -7592,7 +7633,7 @@ nsGlobalWindowInner::GetMessageManager(nsIMessageBroadcaster** aManager)
   return rv.StealNSResult();
 }
 
-ChromeMessageBroadcaster*
+nsIMessageBroadcaster*
 nsGlobalWindowInner::GetMessageManager(ErrorResult& aError)
 {
   MOZ_ASSERT(IsChromeWindow());
@@ -7600,7 +7641,9 @@ nsGlobalWindowInner::GetMessageManager(ErrorResult& aError)
     nsCOMPtr<nsIMessageBroadcaster> globalMM =
       do_GetService("@mozilla.org/globalmessagemanager;1");
     mChromeFields.mMessageManager =
-      new ChromeMessageBroadcaster(static_cast<nsFrameMessageManager*>(globalMM.get()));
+      new nsFrameMessageManager(nullptr,
+                                static_cast<nsFrameMessageManager*>(globalMM.get()),
+                                MM_CHROME | MM_BROADCASTER);
   }
   return mChromeFields.mMessageManager;
 }
@@ -7615,18 +7658,21 @@ nsGlobalWindowInner::GetGroupMessageManager(const nsAString& aGroup,
   return rv.StealNSResult();
 }
 
-ChromeMessageBroadcaster*
+nsIMessageBroadcaster*
 nsGlobalWindowInner::GetGroupMessageManager(const nsAString& aGroup,
                                             ErrorResult& aError)
 {
   MOZ_ASSERT(IsChromeWindow());
 
-  RefPtr<ChromeMessageBroadcaster> messageManager =
+  nsCOMPtr<nsIMessageBroadcaster> messageManager =
     mChromeFields.mGroupMessageManagers.LookupForAdd(aGroup).OrInsert(
       [this, &aError] () {
-        nsFrameMessageManager* parent = GetMessageManager(aError);
+        nsFrameMessageManager* parent =
+          static_cast<nsFrameMessageManager*>(GetMessageManager(aError));
 
-        return new ChromeMessageBroadcaster(parent);
+        return new nsFrameMessageManager(nullptr,
+                                         parent,
+                                         MM_CHROME | MM_BROADCASTER);
       });
   return messageManager;
 }

@@ -129,6 +129,7 @@ class Rule;
 } // namespace css
 
 namespace dom {
+class AboutCapabilities;
 class Animation;
 class AnonymousContent;
 class Attr;
@@ -2867,6 +2868,10 @@ public:
   void GetReferrer(nsAString& aReferrer) const;
   void GetLastModified(nsAString& aLastModified) const;
   void GetReadyState(nsAString& aReadyState) const;
+
+  already_AddRefed<mozilla::dom::AboutCapabilities> GetAboutCapabilities(
+    ErrorResult& aRv);
+
   virtual void GetTitle(nsAString& aTitle) = 0;
   virtual void SetTitle(const nsAString& aTitle, mozilla::ErrorResult& rv) = 0;
   void GetDir(nsAString& aDirection) const;
@@ -3344,10 +3349,13 @@ protected:
   // The array of all links that need their status resolved.  Links must add themselves
   // to this set by calling RegisterPendingLinkUpdate when added to a document.
   static const size_t kSegmentSize = 128;
-  mozilla::SegmentedVector<nsCOMPtr<mozilla::dom::Link>,
-                           kSegmentSize,
-                           InfallibleAllocPolicy>
-    mLinksToUpdate;
+
+  typedef mozilla::SegmentedVector<nsCOMPtr<mozilla::dom::Link>,
+                                   kSegmentSize,
+                                   InfallibleAllocPolicy>
+    LinksToUpdateList;
+
+  LinksToUpdateList mLinksToUpdate;
 
   // SMIL Animation Controller, lazily-initialized in GetAnimationController
   RefPtr<nsSMILAnimationController> mAnimationController;
@@ -3369,6 +3377,8 @@ protected:
   mozilla::EventStates mDocumentState;
 
   RefPtr<mozilla::dom::Promise> mReadyForIdle;
+
+  RefPtr<mozilla::dom::AboutCapabilities> mAboutCapabilities;
 
   // True if BIDI is enabled.
   bool mBidiEnabled : 1;
@@ -3441,11 +3451,11 @@ protected:
   // file, etc.
   bool mIsSyntheticDocument : 1;
 
-  // True if this document has links whose state needs updating
-  bool mHasLinksToUpdate : 1;
-
   // True is there is a pending runnable which will call FlushPendingLinkUpdates().
   bool mHasLinksToUpdateRunnable : 1;
+
+  // True if we're flushing pending link updates.
+  bool mFlushingPendingLinkUpdates : 1;
 
   // True if a DOMMutationObserver is perhaps attached to a node in the document.
   bool mMayHaveDOMMutationObservers : 1;
@@ -3594,12 +3604,6 @@ protected:
   };
 
   Tri mAllowXULXBL;
-
-  /**
-   * This is true while FlushPendingLinkUpdates executes.  Calls to
-   * [Un]RegisterPendingLinkUpdate will assert when this is true.
-   */
-  bool mIsLinkUpdateRegistrationsForbidden;
 
   // The document's script global object, the object from which the
   // document can get its script context and scope. This is the

@@ -2855,10 +2855,10 @@ HttpBaseChannel::GetFetchCacheMode(uint32_t* aFetchCacheMode)
     *aFetchCacheMode = nsIHttpChannelInternal::FETCH_CACHE_MODE_RELOAD;
   } else if (ContainsAllFlags(mLoadFlags, VALIDATE_ALWAYS)) {
     *aFetchCacheMode = nsIHttpChannelInternal::FETCH_CACHE_MODE_NO_CACHE;
-  } else if (ContainsAllFlags(mLoadFlags, LOAD_FROM_CACHE |
+  } else if (ContainsAllFlags(mLoadFlags, VALIDATE_NEVER |
                                           nsICachingChannel::LOAD_ONLY_FROM_CACHE)) {
     *aFetchCacheMode = nsIHttpChannelInternal::FETCH_CACHE_MODE_ONLY_IF_CACHED;
-  } else if (ContainsAllFlags(mLoadFlags, LOAD_FROM_CACHE)) {
+  } else if (ContainsAllFlags(mLoadFlags, VALIDATE_NEVER)) {
     *aFetchCacheMode = nsIHttpChannelInternal::FETCH_CACHE_MODE_FORCE_CACHE;
   } else {
     *aFetchCacheMode = nsIHttpChannelInternal::FETCH_CACHE_MODE_DEFAULT;
@@ -2893,6 +2893,12 @@ HttpBaseChannel::SetFetchCacheMode(uint32_t aFetchCacheMode)
 
   // Now, set the load flags that implement each cache mode.
   switch (aFetchCacheMode) {
+  case nsIHttpChannelInternal::FETCH_CACHE_MODE_DEFAULT:
+    // The "default" mode means to use the http cache normally and
+    // respect any http cache-control headers.  We effectively want
+    // to clear our cache related load flags.
+    SetCacheFlags(mLoadFlags, 0);
+    break;
   case nsIHttpChannelInternal::FETCH_CACHE_MODE_NO_STORE:
     // no-store means don't consult the cache on the way to the network, and
     // don't store the response in the cache even if it's cacheable.
@@ -2909,7 +2915,7 @@ HttpBaseChannel::SetFetchCacheMode(uint32_t aFetchCacheMode)
     break;
   case nsIHttpChannelInternal::FETCH_CACHE_MODE_FORCE_CACHE:
     // force-cache means don't validate unless if the response would vary.
-    SetCacheFlags(mLoadFlags, LOAD_FROM_CACHE);
+    SetCacheFlags(mLoadFlags, VALIDATE_NEVER);
     break;
   case nsIHttpChannelInternal::FETCH_CACHE_MODE_ONLY_IF_CACHED:
     // only-if-cached means only from cache, no network, no validation, generate
@@ -2918,7 +2924,7 @@ HttpBaseChannel::SetFetchCacheMode(uint32_t aFetchCacheMode)
     // the user has things in their cache without any network traffic side
     // effects) are addressed in the Request constructor which enforces/requires
     // same-origin request mode.
-    SetCacheFlags(mLoadFlags, LOAD_FROM_CACHE |
+    SetCacheFlags(mLoadFlags, VALIDATE_NEVER |
                               nsICachingChannel::LOAD_ONLY_FROM_CACHE);
     break;
   }

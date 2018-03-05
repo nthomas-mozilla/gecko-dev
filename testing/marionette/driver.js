@@ -32,7 +32,7 @@ const {
   InvalidArgumentError,
   InvalidCookieDomainError,
   InvalidSelectorError,
-  NoAlertOpenError,
+  NoSuchAlertError,
   NoSuchFrameError,
   NoSuchWindowError,
   SessionNotCreatedError,
@@ -76,7 +76,8 @@ const SUPPORTED_STRATEGIES = new Set([
 ]);
 
 const logger = Log.repository.getLogger("Marionette");
-const globalMessageManager = Services.mm;
+const globalMessageManager = Cc["@mozilla.org/globalmessagemanager;1"]
+    .getService(Ci.nsIMessageBroadcaster);
 
 /**
  * The Marionette WebDriver services provides a standard conforming
@@ -3161,7 +3162,7 @@ GeckoDriver.prototype.sendKeysToDialog = async function(cmd) {
 
 GeckoDriver.prototype._checkIfAlertIsPresent = function() {
   if (!this.dialog || !this.dialog.ui) {
-    throw new NoAlertOpenError("No modal dialog is currently open");
+    throw new NoSuchAlertError("No modal dialog is currently open");
   }
 };
 

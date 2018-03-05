@@ -174,6 +174,10 @@ pref("dom.serviceWorkers.idle_timeout", 30000);
 // The amount of time (milliseconds) service workers can be kept running using waitUntil promises.
 pref("dom.serviceWorkers.idle_extended_timeout", 300000);
 
+// The amount of time (milliseconds) an update request is delayed when triggered
+// by a service worker that doesn't control any clients.
+pref("dom.serviceWorkers.update_delay", 1000);
+
 // Enable test for 24 hours update, service workers will always treat last update check time is over 24 hours
 pref("dom.serviceWorkers.testUpdateOverOneDay", false);
 
@@ -1425,6 +1429,8 @@ pref("privacy.resistFingerprinting.autoDeclineNoUserInputCanvasPrompts", true);
 pref("privacy.reduceTimerPrecision", true);
 // Dynamically tune the resolution of the timer reduction for both of the two above prefs
 pref("privacy.resistFingerprinting.reduceTimerPrecision.microseconds", 2000);
+// Enable jittering the clock one precision value forward
+pref("privacy.resistFingerprinting.reduceTimerPrecision.jitter", true);
 // Lower the priority of network loads for resources on the tracking protection list.
 // Note that this requires the privacy.trackingprotection.annotate_channels pref to be on in order to have any effect.
 #ifdef NIGHTLY_BUILD
@@ -3390,7 +3396,7 @@ pref("dom.ipc.processCount.file", 1);
 pref("dom.ipc.processCount.extension", 1);
 
 // Whether a native event loop should be used in the content process.
-#if defined(XP_WIN) && defined(NIGHTLY_BUILD)
+#if defined(XP_WIN)
 pref("dom.ipc.useNativeEventProcessing.content", false);
 #else
 pref("dom.ipc.useNativeEventProcessing.content", true);
@@ -4693,6 +4699,15 @@ pref("toolkit.zoomManager.zoomValues", ".3,.5,.67,.8,.9,1,1.1,1.2,1.33,1.5,1.7,2
 // Image-related prefs
 //
 
+// The maximum size (in kB) that the aggregate frames of an animation can use
+// before it starts to discard already displayed frames and redecode them as
+// necessary.
+pref("image.animated.decode-on-demand.threshold-kb", 20480);
+
+// The minimum number of frames we want to have buffered ahead of an
+// animation's currently displayed frame.
+pref("image.animated.decode-on-demand.batch-size", 6);
+
 // Maximum number of surfaces for an image before entering "factor of 2" mode.
 // This in addition to the number of "native" sizes of an image. A native size
 // is a size for which we can decode a frame without up or downscaling. Most
@@ -5056,8 +5071,17 @@ pref("geo.enabled", true);
 // Timeout for outbound network geolocation provider XHR
 pref("geo.wifi.xhr.timeout", 60000);
 
-// Enable/Disable the orientation API for content
+// Enable/Disable the various sensor APIs for content
 pref("device.sensors.enabled", true);
+pref("device.sensors.orientation.enabled", true);
+pref("device.sensors.motion.enabled", true);
+#ifdef EARLY_BETA_OR_EARLIER
+pref("device.sensors.proximity.enabled", false);
+pref("device.sensors.ambientLight.enabled", false);
+#else
+pref("device.sensors.proximity.enabled", true);
+pref("device.sensors.ambientLight.enabled", true);
+#endif
 
 // Enable/Disable the device storage API for content
 pref("device.storage.enabled", false);

@@ -6,12 +6,10 @@
 
 "use strict";
 
+const { gDevTools } = require("devtools/client/framework/devtools");
 const { getColor } = require("devtools/client/shared/theme");
-
 const { createFactory, createElement } = require("devtools/client/shared/vendor/react");
 const { Provider } = require("devtools/client/shared/vendor/react-redux");
-
-const { gDevTools } = require("devtools/client/framework/devtools");
 
 const FontsApp = createFactory(require("./components/FontsApp"));
 
@@ -38,11 +36,6 @@ class FontInspector {
     this.init();
   }
 
-  componentWillMount() {
-    this.store.dispatch(updatePreviewText(""));
-    this.update(false, "");
-  }
-
   init() {
     if (!this.inspector) {
       return;
@@ -67,6 +60,9 @@ class FontInspector {
 
     // Listen for theme changes as the color of the previews depend on the theme
     gDevTools.on("theme-switched", this.onThemeChanged);
+
+    this.store.dispatch(updatePreviewText(""));
+    this.update(false, "");
   }
 
   /**
@@ -194,6 +190,11 @@ class FontInspector {
       previewText,
       previewFillStyle: getColor("body-color")
     };
+
+    // Add the includeVariations argument into the option to get font variation data.
+    if (this.pageStyle.supportsFontVariations) {
+      options.includeVariations = true;
+    }
 
     fonts = await this.getFontsForNode(node, options);
     otherFonts = await this.getFontsNotInNode(fonts, options);
