@@ -12,7 +12,8 @@ transforms:
    - taskgraph.transforms.task:transforms
 
 kind-dependencies:
-   - build
+   - build-signing
+   - nightly-l10n-signing
 
 job-defaults:
    name: partner-repack
