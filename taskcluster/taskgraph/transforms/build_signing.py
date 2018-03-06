@@ -69,7 +69,7 @@ def define_upstream_artifacts(config, jobs):
                 'paths': [
                     path_template.format(locale=repack_id)
                     # TODO: this should get passed in. for eme it's probably just eme-free
-                    for repack_id in ('partner1', 'partner2')
+                    for repack_id in ('partner1',)
                     for path_template in spec['artifacts']
                 ],
                 'formats': spec['formats'],

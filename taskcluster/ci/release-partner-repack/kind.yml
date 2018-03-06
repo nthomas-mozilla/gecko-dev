@@ -8,10 +8,12 @@ transforms:
    - taskgraph.transforms.release_deps:transforms
    - taskgraph.transforms.partner_repack:transforms
    - taskgraph.transforms.release_notifications:transforms
+   - taskgraph.transforms.job:transforms
    - taskgraph.transforms.task:transforms
 
 kind-dependencies:
    - post-beetmover-dummy
+   - build
 
 job-defaults:
    name: partner-repack
@@ -24,13 +26,16 @@ job-defaults:
       - index.releases.v1.{branch}.latest.{product}.partner_repack
    worker-type: aws-provisioner-v1/gecko-{level}-b-linux
    worker:
-      implementation: docker-worker
-      os: linux
       docker-image:
          in-tree: "update-verify"
       max-run-time: 7200
-      retry-exit-status:
-         - 255
+      artifacts:
+         - name: public/build/partner1.dmg
+           path: /builds/worker/checkouts/gecko/partner1.dmg
+           type: file
+   run:
+      using: run-task
+      sparse-profile: update-verify
 
 jobs:
    firefox-linux:
@@ -48,7 +53,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: linux
+         build_platform: linux-nightly
 
    firefox-linux64:
       label: firefox linux64 partner repacks
@@ -65,7 +70,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: linux
+         build_platform: linux64-nightly
 
    firefox-macosx:
       label: firefox macosx64 partner repacks
@@ -82,7 +87,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: macosx64
+         build_platform: macosx64-nightly
 
    firefox-win32:
       label: firefox win32 partner repacks
@@ -99,7 +104,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: win32
+         build_platform: win32-nightly
 
    firefox-win64:
       label: firefox win64 partner repacks
@@ -116,7 +121,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: win64
+         build_platform: win64-nightly
 
    firefox-macosx-eme-free:
       label: firefox macosx64 EME-free repacks
@@ -133,7 +138,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: macosx64
+         build_platform: macosx64-nightly
 
    firefox-win32-eme-free:
       label: firefox win32 EME-free repacks
@@ -150,7 +155,7 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: win32
+         build_platform: win32-nightly
 
    firefox-win64-eme-free:
       label: firefox win64 EME-free repacks
@@ -167,4 +172,4 @@ jobs:
          kind: test
          tier: 1
       attributes:
-         build_platform: win64
+         build_platform: win64-nightly
