@@ -34,11 +34,11 @@ def add_command(config, tasks):
         if not build_task:
             raise Exception("Couldn't find build task")
 
-        task["run"]["command"] = [
+        task["run"]["command"] = " ".join([
             "cd", "/builds/worker/checkouts/gecko", "&&",
             "curl -L {}target.dmg > partner1.dmg".format(
                 get_taskcluster_artifact_prefix("<{}>".format(build_task))
             )
-        ]
+        ])
 
         yield task
